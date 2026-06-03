@@ -29,7 +29,10 @@ export default function AudioPlayer({ audioUrl, isOutgoing = false }: Props) {
     else { audio.play(); setIsPlaying(true) }
   }, [isPlaying])
 
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`
+  const fmt = (s: number) => {
+    if (!s || !isFinite(s) || isNaN(s)) return '0:00'
+    return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`
+  }
 
   const barColor = isOutgoing ? 'rgba(255,255,255,0.7)' : 'var(--chat-header)'
   const activeColor = isOutgoing ? '#fff' : 'var(--chat-header)'

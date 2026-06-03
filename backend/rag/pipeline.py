@@ -50,8 +50,12 @@ def guardrails_node(state: RAGState) -> RAGState:
         return {**state, "error": "empty_query"}
     if len(query) > 2000:
         return {**state, "error": "query_too_long"}
-    # Naive injection check
-    injection_patterns = ["ignore previous", "ignore all", "system:", "###"]
+    injection_patterns = [
+        "ignore previous", "ignore all", "ignore above", "ignore instructions",
+        "system:", "system prompt", "###", "<<<", ">>>",
+        "you are now", "act as", "pretend to be", "forget everything",
+        "new instruction", "override", "jailbreak", "dan mode",
+    ]
     lower = query.lower()
     if any(p in lower for p in injection_patterns):
         return {**state, "error": "injection_detected"}
