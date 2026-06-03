@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --chat-bg: oklch(0.93 0.02 110);
+  --chat-header: oklch(0.4 0.08 160);
+  --bubble-out: oklch(0.85 0.1 145);
+  --bubble-in: #ffffff;
+  --composer-bg: oklch(0.91 0.02 110);
+}
+
+/* Urdu/RTL text support */
+[lang="ur"], .urdu {
+  direction: rtl;
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+  line-height: 2;
+}
+
+/* Smooth scrollbar for chat window */
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 2px;
+}
+
+/* Chat widget slide-up animation */
+@keyframes chat-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chat-slide-up {
+  animation: chat-slide-up 0.2s ease-out;
+}

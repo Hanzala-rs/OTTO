@@ -1,0 +1,10 @@
+[
+  {
+    "question": "What is artificial intelligence?",
+    "ground_truth": "Artificial intelligence is the simulation of human intelligence processes by computer systems, including learning, reasoning, and self-correction."
+  },
+  {
+    "question": "What does machine learning do?",
+    "ground_truth": "Machine learning automates analytical model building by allowing systems to learn from data, identify patterns, and make decisions with minimal human intervention."
+  }
+]

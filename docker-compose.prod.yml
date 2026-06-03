@@ -1,0 +1,17 @@
+# Production overrides — used with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+services:
+  backend:
+    volumes: []   # no hot-reload bind mount in prod
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    deploy:
+      resources:
+        limits:
+          memory: 4G   # Whisper medium + Coqui TTS need ~3GB
+
+  ingestion:
+    volumes: []
+
+  frontend:
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}

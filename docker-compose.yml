@@ -1,0 +1,125 @@
+services:
+  postgres:
+    image: postgres:16
+    command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-otto_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-otto}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-otto_user} -d ${POSTGRES_DB:-otto}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redpanda:
+    image: redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+      - --schema-registry-addr=0.0.0.0:8081
+    ports:
+      - "9092:9092"
+      - "8081:8081"
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q healthy"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  debezium:
+    image: debezium/connect:2.5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: redpanda:9092
+      GROUP_ID: debezium-group
+      CONFIG_STORAGE_TOPIC: debezium_configs
+      OFFSET_STORAGE_TOPIC: debezium_offsets
+      STATUS_STORAGE_TOPIC: debezium_statuses
+    ports:
+      - "8083:8083"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "8333:8333"
+      - "8334:8334"
+    env_file:
+      - ./infra/docker/qdrant.env
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ingestion:
+    build:
+      context: ./ingestion
+      dockerfile: Dockerfile
+    depends_on:
+      - redpanda
+      - qdrant
+      - postgres
+    env_file: .env
+    volumes:
+      - ./ingestion:/app
+      - ./datasets:/app/datasets
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+      - redis
+      - postgres
+    env_file: .env
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+      HF_HUB_DISABLE_XET: "1"
+    volumes:
+      - ./backend:/app
+      - hf_cache:/root/.cache/huggingface
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  hf_cache:

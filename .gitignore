@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+.env
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Models (too large for git)
+*.bin
+*.pt
+*.pth
+*.onnx
+backend/models/
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Evals output
+evals/results/*.json
+
+# Qdrant local data
+qdrant_data/
+
+# Dataset files (keep the folder, ignore contents)
+datasets/*
+!datasets/.gitkeep

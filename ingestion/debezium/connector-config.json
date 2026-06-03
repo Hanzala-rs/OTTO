@@ -1,0 +1,24 @@
+{
+  "name": "otto-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "${POSTGRES_USER}",
+    "database.password": "${POSTGRES_PASSWORD}",
+    "database.dbname": "${POSTGRES_DB}",
+    "database.server.name": "otto",
+    "plugin.name": "pgoutput",
+    "table.include.list": "public.documents",
+    "topic.prefix": "otto",
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "3"
+  }
+}

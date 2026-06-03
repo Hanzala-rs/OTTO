@@ -1,0 +1,52 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# LangChain ecosystem — let pip resolve compatible versions
+langchain>=0.2.14,<0.3
+langchain-groq>=0.1.9,<0.2
+langchain-community>=0.2.14,<0.3
+langchain-core>=0.2.43,<0.3
+langgraph>=0.1.19,<0.2
+langsmith>=0.1.112,<0.2
+
+# Vector store
+qdrant-client==1.7.3
+
+# Embeddings & reranker
+sentence-transformers==2.7.0
+FlagEmbedding==1.2.5
+torch==2.6.0+cpu
+torchaudio==2.6.0+cpu
+
+# Voice — STT
+faster-whisper==1.0.3
+
+# Voice — TTS
+elevenlabs==1.1.2
+edge-tts>=6.1.9
+
+# Audio processing
+ffmpeg-python==0.2.0
+
+# Memory
+redis==5.0.4
+
+# Language detection
+langdetect==1.0.9
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.29
+
+# Monitoring
+prometheus-client==0.20.0
+
+# Config
+pydantic==2.6.4
+pydantic-settings==2.2.1
+python-dotenv==1.0.1
+loguru==0.7.2
