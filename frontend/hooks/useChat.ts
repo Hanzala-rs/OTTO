@@ -57,19 +57,20 @@ export function useChat() {
     if (isLoading) return
     setError(null)
     setIsLoading(true)
+
+    // Show user's voice bubble immediately before API call
+    const userAudioUrl = URL.createObjectURL(audioBlob)
+    addMessage({
+      role: 'user',
+      content: '',
+      language: 'en',
+      audioUrl: userAudioUrl,
+      isVoice: true,
+    })
+
     try {
       const res = await sendVoiceMessage(audioBlob, sessionId)
       if (!sessionId) setSessionId(res.sessionId)
-
-      // Show user transcript
-      if (res.transcript) {
-        addMessage({
-          role: 'user',
-          content: res.transcript,
-          language: res.language,
-          isVoice: true,
-        })
-      }
 
       // Assistant audio response
       const audioUrl = URL.createObjectURL(res.audioBlob)
