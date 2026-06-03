@@ -22,25 +22,37 @@ export default function MessageBubble({ message }: Props) {
         }}
         dir={rtl ? 'rtl' : 'ltr'}
       >
-        {/* Voice indicator */}
-        {message.isVoice && (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-500 mb-1">
-            <Mic size={10} />
-            {isUser ? 'Voice message' : 'Voice response'}
-          </span>
+        {/* Voice message — user side (no audio URL, show static waveform) */}
+        {message.isVoice && isUser && !message.audioUrl && (
+          <div className="flex items-center gap-2 py-1 min-w-[180px]">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/25">
+              <Mic size={16} className="text-white" />
+            </div>
+            <div className="flex flex-1 items-end gap-[2px] h-8">
+              {Array.from({ length: 28 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="rounded-full flex-1"
+                  style={{ height: `${4 + ((i * 13 + i * i) % 22)}px`, backgroundColor: 'rgba(255,255,255,0.8)' }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Audio player for bot voice responses */}
+        {message.audioUrl && (
+          <AudioPlayer audioUrl={message.audioUrl} isOutgoing={isUser} />
         )}
 
         {/* Text content */}
-        {message.content && (
+        {message.content && !message.audioUrl && (
           <div className={cn('leading-relaxed break-words space-y-1', rtl && 'urdu')}>
             {message.content.split('\n').filter(l => l.trim()).map((line, i) => (
               <p key={i}>{line}</p>
             ))}
           </div>
         )}
-
-        {/* Audio player for voice responses */}
-        {message.audioUrl && <AudioPlayer audioUrl={message.audioUrl} />}
 
         {/* Timestamp + read receipt */}
         <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-500">

@@ -130,27 +130,6 @@ def llm_node(state: RAGState) -> RAGState:
 
 
 def output_guard_node(state: RAGState) -> RAGState:
-    """Verify the response language matches the query language."""
-    if state.get("error") or not state.get("response"):
-        return state
-
-    from langdetect import detect
-    try:
-        resp_lang = detect(state["response"])
-    except Exception:
-        resp_lang = state["language"]
-
-    # If mismatch, ask LLM to translate
-    if state["language"] == "ur" and resp_lang != "ur":
-        logger.warning("Language mismatch detected — requesting Urdu response")
-        llm = get_llm()
-        fix_prompt = ChatPromptTemplate.from_messages([
-            ("system", "Translate the following text to Urdu (Nastaliq script). Return only the translation."),
-            ("human", "{text}"),
-        ])
-        fixed = (fix_prompt | llm | StrOutputParser()).invoke({"text": state["response"]})
-        return {**state, "response": fixed}
-
     return state
 
 

@@ -13,7 +13,15 @@ export interface Message {
 }
 
 export function useChat() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'intro',
+      role: 'assistant',
+      content: "Assalam o Alaikum! 👋 I'm OTTO, your Bank AL Habib assistant. Ask me anything in English or اردو — about accounts, cards, loans, or any banking service.",
+      language: 'en',
+      timestamp: new Date(),
+    }
+  ])
   const [sessionId, setSessionId] = useState<string | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
