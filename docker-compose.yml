@@ -28,6 +28,7 @@ services:
       - --kafka-addr=PLAINTEXT://0.0.0.0:9092
       - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
       - --schema-registry-addr=0.0.0.0:8081
+      - --set=redpanda.kafka_batch_max_bytes=104857600
     ports:
       - "9092:9092"
       - "8081:8081"
@@ -83,9 +84,13 @@ services:
       - qdrant
       - postgres
     env_file: .env
+    environment:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
     volumes:
       - ./ingestion:/app
       - ./datasets:/app/datasets
+      - hf_cache:/root/.cache/huggingface
     restart: unless-stopped
 
   backend:

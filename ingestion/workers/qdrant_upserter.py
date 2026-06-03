@@ -59,7 +59,7 @@ class QdrantUpserter:
             PointStruct(
                 id=chunk.chunk_id,
                 vector=vector,
-                payload=chunk.model_dump(exclude={"text"}),
+                payload=chunk.model_dump(),
             )
             for chunk, vector in chunks_with_vectors
         ]

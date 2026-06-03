@@ -32,9 +32,11 @@ export default function MessageBubble({ message }: Props) {
 
         {/* Text content */}
         {message.content && (
-          <p className={cn('leading-relaxed whitespace-pre-wrap break-words', rtl && 'urdu')}>
-            {message.content}
-          </p>
+          <div className={cn('leading-relaxed break-words space-y-1', rtl && 'urdu')}>
+            {message.content.split('\n').filter(l => l.trim()).map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
         )}
 
         {/* Audio player for voice responses */}
