@@ -36,15 +36,10 @@ class HybridRetriever:
     ) -> List[dict]:
         query_vector = self.embedder.encode(query, normalize_embeddings=True).tolist()
 
-        lang_filter = Filter(
-            must=[FieldCondition(key="lang", match=MatchValue(value=lang))]
-        )
-
-        # Dense search (semantic)
+        # Dense search (semantic) — no language filter, LLM handles response language
         dense_hits = self.client.search(
             collection_name=COLLECTION,
             query_vector=query_vector,
-            query_filter=lang_filter,
             limit=top_k,
             with_payload=True,
         )
