@@ -1,7 +1,9 @@
 'use client'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn, isUrdu, formatTime } from '@/lib/utils'
 import AudioPlayer from './AudioPlayer'
-import { Mic, CheckCheck } from 'lucide-react'
+import { CheckCheck } from 'lucide-react'
 import type { Message } from '@/hooks/useChat'
 
 interface Props {
@@ -15,42 +17,49 @@ export default function MessageBubble({ message }: Props) {
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
-        className="relative max-w-[78%] rounded-lg px-3 py-2 text-sm shadow-sm"
+        className="relative max-w-[85%] rounded-lg px-3 py-2 text-sm shadow-sm"
         style={{
           backgroundColor: isUser ? 'var(--bubble-out)' : 'var(--bubble-in)',
           color: '#1a1a1a',
         }}
         dir={rtl ? 'rtl' : 'ltr'}
       >
-        {/* Voice message — user side (no audio URL, show static waveform) */}
-        {message.isVoice && isUser && !message.audioUrl && (
-          <div className="flex items-center gap-2 py-1 min-w-[180px]">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/25">
-              <Mic size={16} className="text-white" />
-            </div>
-            <div className="flex flex-1 items-end gap-[2px] h-8">
-              {Array.from({ length: 28 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="rounded-full flex-1"
-                  style={{ height: `${4 + ((i * 13 + i * i) % 22)}px`, backgroundColor: 'rgba(255,255,255,0.8)' }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Audio player for bot voice responses */}
+        {/* Audio player — user sent (isOutgoing=true) or bot response (isOutgoing=false) */}
         {message.audioUrl && (
           <AudioPlayer audioUrl={message.audioUrl} isOutgoing={isUser} />
         )}
 
-        {/* Text content */}
+        {/* Markdown text content */}
         {message.content && !message.audioUrl && (
-          <div className={cn('leading-relaxed break-words space-y-1', rtl && 'urdu')}>
-            {message.content.split('\n').filter(l => l.trim()).map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
+          <div className={cn('leading-relaxed break-words', rtl && 'urdu')}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h3: ({ children }) => <h3 className="font-semibold text-sm mt-2 mb-1">{children}</h3>,
+                h4: ({ children }) => <h4 className="font-semibold text-xs mt-2 mb-1">{children}</h4>,
+                p: ({ children }) => <p className="mb-1">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc pl-4 mb-1 space-y-0.5">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-4 mb-1 space-y-0.5">{children}</ol>,
+                li: ({ children }) => <li className="text-sm">{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                table: ({ children }) => (
+                  <div className="overflow-x-auto my-2">
+                    <table className="text-xs border-collapse w-full">{children}</table>
+                  </div>
+                ),
+                thead: ({ children }) => <thead>{children}</thead>,
+                tbody: ({ children }) => <tbody>{children}</tbody>,
+                tr: ({ children }) => <tr className="border-b border-slate-200">{children}</tr>,
+                th: ({ children }) => (
+                  <th className="text-left px-2 py-1 font-semibold bg-slate-100 border border-slate-200">{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td className="px-2 py-1 border border-slate-200">{children}</td>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
         )}
 
