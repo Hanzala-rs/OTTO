@@ -25,7 +25,7 @@ def run_eval(lang: str) -> None:
 
     for item in dataset:
         result = graph.invoke({
-            "session_id": f"eval-{len(questions)}",  # fresh session per question, no history bleed
+            "session_id": "eval",
             "query": item["question"],
             "language": lang,
             "is_voice": False,

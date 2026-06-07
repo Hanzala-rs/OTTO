@@ -45,6 +45,10 @@ sqlalchemy==2.0.29
 # Monitoring
 prometheus-client==0.20.0
 
+# Evaluation
+ragas>=0.1.21
+datasets>=2.19.0
+
 # Config
 pydantic==2.6.4
 pydantic-settings==2.2.1
