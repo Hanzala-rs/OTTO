@@ -43,3 +43,5 @@ qdrant_data/
 # Dataset files (keep the folder, ignore contents)
 datasets/*
 !datasets/.gitkeep
+
+FAQ.md

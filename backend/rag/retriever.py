@@ -16,7 +16,7 @@ from loguru import logger
 
 from config.settings import get_settings
 
-DENSE_TOP_K = 20   # retrieve 20 before reranking
+DENSE_TOP_K = 10   # retrieve 10 before reranking
 COLLECTION = get_settings().qdrant_collection
 
 

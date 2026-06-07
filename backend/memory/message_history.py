@@ -10,7 +10,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from memory.session_store import get_redis
 from config.settings import get_settings
 
-MAX_MESSAGES = 10   # keep last 10 turns
+MAX_MESSAGES = 6    # keep last 6 turns
 
 
 class RedisMessageHistory:

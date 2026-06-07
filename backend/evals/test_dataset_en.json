@@ -1,0 +1,62 @@
+[
+  {
+    "question": "What types of savings accounts does Bank AL Habib offer?",
+    "ground_truth": "Bank AL Habib offers various savings accounts including regular savings accounts, foreign currency savings accounts, and women-specific savings accounts with competitive profit rates."
+  },
+  {
+    "question": "What is the Al Habib Roshan Digital Account?",
+    "ground_truth": "The Roshan Digital Account (RDA) is a special account for overseas Pakistanis allowing them to bank digitally from abroad, invest in Pakistan, and repatriate funds freely."
+  },
+  {
+    "question": "What documents are required to open a current account?",
+    "ground_truth": "To open a current account at Bank AL Habib, you typically need a valid CNIC, recent passport-sized photographs, and proof of address or income depending on account type."
+  },
+  {
+    "question": "What is the Al Habib Islamic banking car financing?",
+    "ground_truth": "Al Habib Islamic banking offers Apni Car auto finance under Shariah-compliant Diminishing Musharakah structure, allowing customers to purchase vehicles without conventional interest."
+  },
+  {
+    "question": "What is a debit card and what does Bank AL Habib offer?",
+    "ground_truth": "A debit card allows direct access to funds in a bank account for purchases and ATM withdrawals. Bank AL Habib offers debit cards including UnionPay and freelancer FCY debit cards."
+  },
+  {
+    "question": "What is the schedule of charges for Islamic banking?",
+    "ground_truth": "Bank AL Habib publishes a schedule of charges for Islamic banking services covering account maintenance, transactions, and other banking services updated periodically."
+  },
+  {
+    "question": "What SME banking services does Bank AL Habib provide?",
+    "ground_truth": "Bank AL Habib provides SME banking services including financing facilities, current and savings accounts, and trade finance solutions tailored for small and medium enterprises."
+  },
+  {
+    "question": "What is the Al Habib freelancer current account?",
+    "ground_truth": "The Al Habib Freelancer Current Account is designed for freelancers to receive foreign currency payments, offering an FCY debit card and easy fund repatriation."
+  },
+  {
+    "question": "What home remittance services does Bank AL Habib offer?",
+    "ground_truth": "Bank AL Habib offers home remittance services including Al Habib Express Remittance and the Proceed Realisation Certificate for overseas Pakistanis to send money home."
+  },
+  {
+    "question": "What is the profit sharing mechanism in Islamic banking?",
+    "ground_truth": "In Islamic banking, profit sharing replaces conventional interest. Depositors share in the bank's actual profits based on a pre-agreed ratio rather than receiving a fixed interest rate."
+  },
+  {
+    "question": "What corporate banking services are available at Bank AL Habib?",
+    "ground_truth": "Bank AL Habib offers corporate banking services including trade finance, guarantees, cash management, financing facilities, and foreign currency accounts for businesses."
+  },
+  {
+    "question": "What is the Al Habib women banking initiative?",
+    "ground_truth": "Bank AL Habib offers dedicated women banking products including specialized savings accounts, consumer financing, SME financing, and rural banking tailored for women customers."
+  },
+  {
+    "question": "How can I file a customer complaint at Bank AL Habib?",
+    "ground_truth": "Bank AL Habib provides multiple complaint channels including branch visits, phone banking, and online complaint submission to ensure fair treatment of customers."
+  },
+  {
+    "question": "What is the Al Habib agriculture banking offering?",
+    "ground_truth": "Bank AL Habib provides agriculture banking services for rural customers including agri financing and Islamic agriculture finance to support farming and rural businesses."
+  },
+  {
+    "question": "What is the GEM Gateway to Equity Market service?",
+    "ground_truth": "GEM (Gateway to Equity Market) is Bank AL Habib's investment banking service that allows customers to invest in the Pakistan Stock Exchange through the bank."
+  }
+]

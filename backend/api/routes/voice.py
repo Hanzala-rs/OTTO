@@ -56,8 +56,8 @@ async def voice_chat(
         raise HTTPException(status_code=500, detail="No response generated")
 
     # 4. TTS → 5. Convert to .ogg
-    raw_audio = synthesize(text_response, language)
-    ogg_audio = to_ogg(raw_audio, input_format="wav")
+    raw_audio = await synthesize(text_response, language)
+    ogg_audio = to_ogg(raw_audio, input_format="mp3")
 
     return Response(
         content=ogg_audio,
