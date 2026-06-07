@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
 
     # Whisper STT
-    whisper_model: str = "medium"
+    whisper_model: str = "small"
 
     # ElevenLabs TTS (English)
     elevenlabs_api_key: str = ""
