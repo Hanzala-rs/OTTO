@@ -110,27 +110,31 @@ def llm_node(state: RAGState) -> RAGState:
     if state.get("error"):
         return state
 
-    llm = get_llm()
-    history = get_history(state["session_id"])
-    messages = history.get_messages()
+    try:
+        llm = get_llm()
+        history = get_history(state["session_id"])
+        messages = history.get_messages()
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", RAG_SYSTEM_PROMPT),
-        *[(m.type, m.content) for m in messages],
-        ("human", "{query}"),
-    ])
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", RAG_SYSTEM_PROMPT),
+            *[(m.type, m.content) for m in messages],
+            ("human", "{query}"),
+        ])
 
-    chain = prompt | llm | StrOutputParser()
-    response = chain.invoke({
-        "context": state.get("context", "No relevant context found."),
-        "query": state["query"],
-    })
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({
+            "context": state.get("context", "No relevant context found."),
+            "query": state["query"],
+        })
 
-    # Persist to session history
-    history.add_message(HumanMessage(content=state["query"]))
-    history.add_message(AIMessage(content=response))
+        history.add_message(HumanMessage(content=state["query"]))
+        history.add_message(AIMessage(content=response))
 
-    return {**state, "response": response}
+        return {**state, "response": response}
+
+    except Exception as exc:
+        logger.error(f"LLM node failed: {exc}")
+        return {**state, "response": "I'm having trouble connecting right now. Please try again in a moment."}
 
 
 def output_guard_node(state: RAGState) -> RAGState:

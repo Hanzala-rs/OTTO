@@ -28,6 +28,10 @@ def process_event(event: DocumentEvent) -> None:
         logger.info(f"Deleted vectors for doc_id={event.doc_id}")
         return
 
+    if event.op == "u":
+        upserter.delete_by_doc_id(event.doc_id)
+        logger.info(f"Cleared stale vectors for updated doc_id={event.doc_id}")
+
     lang = detect_language(event.content)
     chunks = chunker.chunk(
         doc_id=event.doc_id,
