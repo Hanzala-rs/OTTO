@@ -66,5 +66,7 @@ async def voice_chat(
             "X-Session-Id": session_id,
             "X-Transcript": transcript.text,
             "X-Language": language,
+            "X-Response": text_response,
+            "Access-Control-Expose-Headers": "X-Session-Id, X-Transcript, X-Language, X-Response",
         },
     )
