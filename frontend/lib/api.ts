@@ -50,8 +50,8 @@ export async function sendVoiceMessage(
   return {
     audioBlob: await res.blob(),
     sessionId: res.headers.get('X-Session-Id') || sessionId || '',
-    transcript: res.headers.get('X-Transcript') || '',
+    transcript: decodeURIComponent(res.headers.get('X-Transcript') || ''),
     language: res.headers.get('X-Language') || 'en',
-    response: res.headers.get('X-Response') || '',
+    response: decodeURIComponent(res.headers.get('X-Response') || ''),
   }
 }

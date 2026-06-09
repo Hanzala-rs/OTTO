@@ -8,7 +8,8 @@ from loguru import logger
 
 from config.settings import get_settings
 
-TOP_N = 5
+TOP_N = 3
+SCORE_THRESHOLD = -3.0  # cross-encoder raw logit; below this = not relevant
 
 
 class Reranker:
@@ -30,7 +31,9 @@ class Reranker:
             key=lambda x: x[0],
             reverse=True,
         )
-        return [chunk for _, chunk in scored[:TOP_N]]
+        # Drop chunks the reranker considers irrelevant
+        relevant = [(s, c) for s, c in scored if s >= SCORE_THRESHOLD]
+        return [chunk for _, chunk in relevant[:TOP_N]]
 
 
 @lru_cache

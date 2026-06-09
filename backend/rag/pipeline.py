@@ -102,7 +102,8 @@ def reranker_node(state: RAGState) -> RAGState:
                 chunk = {**chunk, "text": parent_text}
         enriched.append(chunk)
 
-    context = "\n\n---\n\n".join(c["text"] for c in enriched)
+    MAX_CHUNK_CHARS = 800
+    context = "\n\n---\n\n".join(c["text"][:MAX_CHUNK_CHARS] for c in enriched)
     return {**state, "reranked_chunks": enriched, "context": context}
 
 

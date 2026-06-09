@@ -4,14 +4,12 @@ import { cn } from '@/lib/utils'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 
 interface Props {
-  onVoiceMessage: (blob: Blob) => void
+  onVoiceMessage: (blob: Blob) => Promise<void> | void
   disabled?: boolean
 }
 
 export default function VoiceInput({ onVoiceMessage, disabled }: Props) {
-  const { state, start, stop } = useVoiceRecorder((blob) => {
-    onVoiceMessage(blob)
-  })
+  const { state, start, stop } = useVoiceRecorder(onVoiceMessage)
 
   const handleClick = () => {
     if (state === 'recording') {
