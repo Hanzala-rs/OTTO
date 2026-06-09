@@ -1,6 +1,7 @@
 """Voice chat endpoint — accepts .ogg audio, returns .ogg audio."""
 from __future__ import annotations
 import uuid
+from urllib.parse import quote
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
@@ -64,7 +65,9 @@ async def voice_chat(
         media_type="audio/ogg",
         headers={
             "X-Session-Id": session_id,
-            "X-Transcript": transcript.text,
+            "X-Transcript": quote(transcript.text),
             "X-Language": language,
+            "X-Response": quote(text_response, safe=' '),
+            "Access-Control-Expose-Headers": "X-Session-Id, X-Transcript, X-Language, X-Response",
         },
     )

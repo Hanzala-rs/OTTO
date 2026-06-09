@@ -17,7 +17,7 @@ export function useChat() {
     {
       id: 'intro',
       role: 'assistant',
-      content: "Assalam o Alaikum! 👋 I'm OTTO, your Bank AL Habib assistant. Ask me anything in English or اردو — about accounts, cards, loans, or any banking service.",
+      content: "Assalam o Alaikum! I'm OTTO. How can I help you today?",
       language: 'en',
       timestamp: new Date(),
     }
@@ -72,11 +72,11 @@ export function useChat() {
       const res = await sendVoiceMessage(audioBlob, sessionId)
       if (!sessionId) setSessionId(res.sessionId)
 
-      // Assistant audio response
+      // Assistant audio + text response
       const audioUrl = URL.createObjectURL(res.audioBlob)
       addMessage({
         role: 'assistant',
-        content: '',   // audio only — AudioPlayer renders it
+        content: res.response,
         language: res.language,
         audioUrl,
         isVoice: true,

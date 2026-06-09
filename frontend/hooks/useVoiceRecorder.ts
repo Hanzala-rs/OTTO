@@ -3,7 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 
 export type RecordingState = 'idle' | 'recording' | 'processing'
 
-export function useVoiceRecorder(onComplete: (blob: Blob) => void) {
+export function useVoiceRecorder(onComplete: (blob: Blob) => Promise<void> | void) {
   const [state, setState] = useState<RecordingState>('idle')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -23,11 +23,15 @@ export function useVoiceRecorder(onComplete: (blob: Blob) => void) {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop())
         const blob = new Blob(chunksRef.current, { type: mimeType })
         setState('processing')
-        onComplete(blob)
+        try {
+          await onComplete(blob)
+        } finally {
+          setState('idle')
+        }
       }
 
       recorder.start(100)

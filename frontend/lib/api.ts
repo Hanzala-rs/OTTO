@@ -27,6 +27,7 @@ export interface VoiceResponse {
   sessionId: string
   transcript: string
   language: string
+  response: string
 }
 
 export async function sendVoiceMessage(
@@ -49,7 +50,8 @@ export async function sendVoiceMessage(
   return {
     audioBlob: await res.blob(),
     sessionId: res.headers.get('X-Session-Id') || sessionId || '',
-    transcript: res.headers.get('X-Transcript') || '',
+    transcript: decodeURIComponent(res.headers.get('X-Transcript') || ''),
     language: res.headers.get('X-Language') || 'en',
+    response: decodeURIComponent(res.headers.get('X-Response') || ''),
   }
 }

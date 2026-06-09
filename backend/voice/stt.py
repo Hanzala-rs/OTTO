@@ -37,9 +37,14 @@ def transcribe(audio_bytes: bytes) -> TranscriptResult:
         tmp_path = tmp.name
 
     try:
-        segments, info = model.transcribe(tmp_path, beam_size=5)
+        # Detect language first (lightweight pass)
+        _, info = model.transcribe(tmp_path, beam_size=1)
+        # Hindi (hi) and Punjabi (pa) are misdetected Urdu in this context
+        whisper_lang = "en" if info.language == "en" else "ur"
+
+        # Re-transcribe with correct language to get proper script
+        segments, _ = model.transcribe(tmp_path, beam_size=5, language=whisper_lang)
         text = " ".join(seg.text.strip() for seg in segments)
-        lang = info.language if info.language in ("ur", "en") else "en"
-        return TranscriptResult(text=text.strip(), language=lang)
+        return TranscriptResult(text=text.strip(), language=whisper_lang)
     finally:
         os.unlink(tmp_path)
