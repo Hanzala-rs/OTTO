@@ -7,6 +7,8 @@ export function useVoiceRecorder(onComplete: (blob: Blob) => Promise<void> | voi
   const [state, setState] = useState<RecordingState>('idle')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   const start = useCallback(async () => {
     try {
@@ -28,7 +30,7 @@ export function useVoiceRecorder(onComplete: (blob: Blob) => Promise<void> | voi
         const blob = new Blob(chunksRef.current, { type: mimeType })
         setState('processing')
         try {
-          await onComplete(blob)
+          await onCompleteRef.current(blob)
         } finally {
           setState('idle')
         }
@@ -40,7 +42,7 @@ export function useVoiceRecorder(onComplete: (blob: Blob) => Promise<void> | voi
       setState('idle')
       throw new Error('Microphone access denied')
     }
-  }, [onComplete])
+  }, [])
 
   const stop = useCallback(() => {
     if (mediaRecorderRef.current?.state === 'recording') {

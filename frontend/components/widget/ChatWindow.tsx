@@ -13,7 +13,10 @@ interface Props {
 export default function ChatWindow({ onClose }: Props) {
   const { messages, isLoading, error, sendText, sendVoice, clearChat } = useChat()
   const [input, setInput] = useState('')
+  const [isVoiceBusy, setIsVoiceBusy] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const isBusy = isLoading || isVoiceBusy
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -21,7 +24,7 @@ export default function ChatWindow({ onClose }: Props) {
 
   const handleSend = () => {
     const t = input.trim()
-    if (!t || isLoading) return
+    if (!t || isBusy) return
     sendText(t)
     setInput('')
   }
@@ -46,7 +49,7 @@ export default function ChatWindow({ onClose }: Props) {
         <div className="flex-1">
           <div className="text-sm font-semibold text-white">OTTO</div>
           <div className="text-xs text-white/70">
-            {isLoading ? 'typing…' : 'online · EN | اردو'}
+            {isBusy ? 'typing…' : 'online · EN | اردو'}
           </div>
         </div>
         <button
@@ -76,7 +79,7 @@ export default function ChatWindow({ onClose }: Props) {
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
-        {isLoading && (
+        {isBusy && (
           <div className="flex justify-start">
             <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
               <TypingIndicator />
@@ -98,15 +101,15 @@ export default function ChatWindow({ onClose }: Props) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           placeholder="Type in English or اردو..."
-          disabled={isLoading}
+          disabled={isBusy}
           className="flex-1 rounded-full bg-white px-4 py-2 text-sm text-slate-800 outline-none placeholder-slate-400 disabled:opacity-50"
           style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
         />
-        <VoiceInput onVoiceMessage={sendVoice} disabled={isLoading} />
+        <VoiceInput onVoiceMessage={sendVoice} disabled={isLoading} onBusyChange={setIsVoiceBusy} />
         {input.trim() && (
           <button
             onClick={handleSend}
-            disabled={isLoading}
+            disabled={isBusy}
             aria-label="Send message"
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-white transition hover:opacity-90 disabled:opacity-40"
             style={{ backgroundColor: 'var(--chat-header)' }}

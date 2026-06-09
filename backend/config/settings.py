@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # LLM — Groq free tier
     groq_api_key: str = ""
-    llm_model: str = "gemma2-9b-it"
+    llm_model: str = "llama-3.3-70b-versatile"
     llm_temperature: float = 0.2
 
     # Embeddings

@@ -41,6 +41,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Session-Id", "X-Transcript", "X-Language", "X-Response"],
 )
 
 app.include_router(health.router, tags=["health"])

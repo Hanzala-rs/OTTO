@@ -23,6 +23,9 @@ async def voice_chat(
     session_id = session_id or str(uuid.uuid4())
     audio_bytes = await audio.read()
 
+    if len(audio_bytes) < 200:
+        raise HTTPException(status_code=400, detail="Audio too short or empty")
+
     # 1. VAD — reject silence
     if not has_speech(audio_bytes):
         raise HTTPException(status_code=400, detail="No speech detected in audio")
