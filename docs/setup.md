@@ -191,6 +191,26 @@ docker-compose up -d
 
 After restart, re-register the Debezium connector (Step 4) if it is not running.
 
+### Testing chat/voice only (low-RAM machines)
+
+The CDC services (`debezium`, `redpanda`, `ingestion`) are only needed to ingest new documents. They use ~1.2 GB RAM plus CPU and slow voice down sharply on small machines (voice measured 35–113 s with them running vs ~18–21 s without).
+
+Stop them while testing chat/voice:
+
+```bash
+docker compose stop debezium redpanda ingestion
+```
+
+Start them again before ingesting documents (then re-check Step 4):
+
+```bash
+docker compose start debezium redpanda ingestion
+```
+
+Note: `docker compose up -d` starts them again — stop them afterwards if you're only testing.
+
+**Windows tip:** other heavy local services (e.g. SQL Server) compete for the same CPU. Stop them from an **admin** PowerShell while testing voice.
+
 ---
 
 ## Common Issues
