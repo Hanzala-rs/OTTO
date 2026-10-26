@@ -217,7 +217,7 @@ Note: `docker compose up -d` starts them again — stop them afterwards if you'r
 
 **Backend shows "Failed to fetch" on first message**
 
-The reranker model loads lazily on the first request. Wait 10-15 seconds and try again.
+The backend loads all models (embeddings, Whisper, VAD, reranker) at startup, which takes 1-3 minutes. Requests sent before then fail. Wait until `docker compose logs backend` shows `Application startup complete`, then try again. The first voice request after startup is also slower (~35 s) while models warm up.
 
 **Groq rate limit error (429)**
 
