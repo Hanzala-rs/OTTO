@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from rag.pipeline import get_rag_graph
 from voice.language_router import detect_lang
@@ -28,7 +29,7 @@ async def chat(req: ChatRequest):
     language = detect_lang(req.message)
 
     graph = get_rag_graph()
-    result = graph.invoke({
+    result = await run_in_threadpool(graph.invoke, {
         "session_id": session_id,
         "query": req.message,
         "language": language,

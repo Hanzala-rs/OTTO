@@ -8,7 +8,8 @@ from typing import List
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue,
+    Filter, FieldCondition, MatchAny, MatchText, PayloadSchemaType,
+    TextIndexParams, TokenizerType,
     SearchRequest, SparseVector, NamedSparseVector,
 )
 from sentence_transformers import SentenceTransformer
@@ -23,7 +24,29 @@ COLLECTION = get_settings().qdrant_collection
 class HybridRetriever:
     def __init__(self) -> None:
         s = get_settings()
-        self.client = QdrantClient(url=s.qdrant_url, api_key=s.qdrant_api_key or None)
+        self.client = QdrantClient(
+            url=s.qdrant_url, api_key=s.qdrant_api_key or None, timeout=s.qdrant_timeout
+        )
+        try:
+            # Full-text index for the keyword fallback (no-op if it already exists)
+            self.client.create_payload_index(
+                collection_name=COLLECTION,
+                field_name="text",
+                field_schema=TextIndexParams(
+                    type="text", tokenizer=TokenizerType.WORD, lowercase=True
+                ),
+            )
+        except Exception as exc:
+            logger.warning(f"Could not create text payload index: {exc}")
+        try:
+            # Keyword index for parent lookups by chunk_id (no-op if it already exists)
+            self.client.create_payload_index(
+                collection_name=COLLECTION,
+                field_name="chunk_id",
+                field_schema=PayloadSchemaType.KEYWORD,
+            )
+        except Exception as exc:
+            logger.warning(f"Could not create chunk_id payload index: {exc}")
         logger.info(f"Loading embedding model {s.embedding_model}...")
         self.embedder = SentenceTransformer(s.embedding_model)
         logger.info("Retriever ready.")
@@ -72,25 +95,24 @@ class HybridRetriever:
                 if len(w) > 3 and w.lower() not in _STOPWORDS
             ]
             if keywords:
-                offset = None
                 candidates = []
-                while True:
-                    points, offset = self.client.scroll(
-                        collection_name=COLLECTION,
-                        limit=200,
-                        with_payload=True,
-                        offset=offset,
-                    )
-                    for p in points:
-                        cid = (p.payload or {}).get("chunk_id")
-                        if cid in seen_ids:
-                            continue
-                        text_lower = (p.payload or {}).get("text", "").lower()
-                        match_count = sum(1 for kw in keywords if kw in text_lower)
-                        if match_count >= max(2, len(keywords) // 2):
-                            candidates.append((match_count, p))
-                    if offset is None:
-                        break
+                points, _ = self.client.scroll(
+                    collection_name=COLLECTION,
+                    scroll_filter=Filter(should=[
+                        FieldCondition(key="text", match=MatchText(text=kw))
+                        for kw in keywords
+                    ]),
+                    limit=50,
+                    with_payload=True,
+                )
+                for p in points:
+                    cid = (p.payload or {}).get("chunk_id")
+                    if cid in seen_ids:
+                        continue
+                    text_lower = (p.payload or {}).get("text", "").lower()
+                    match_count = sum(1 for kw in keywords if kw in text_lower)
+                    if match_count >= max(2, len(keywords) // 2):
+                        candidates.append((match_count, p))
                 # Take top-5 by keyword overlap
                 candidates.sort(key=lambda x: x[0], reverse=True)
                 for _, p in candidates[:5]:
@@ -109,19 +131,22 @@ class HybridRetriever:
 
         return results
 
-    def fetch_parent(self, parent_id: str) -> str | None:
-        """Fetch the full parent chunk text by parent_id."""
+    def fetch_parents(self, parent_ids: List[str]) -> dict:
+        """Fetch parent chunk texts in one call. Returns {parent_id: text}."""
+        if not parent_ids:
+            return {}
         hits, _ = self.client.scroll(
             collection_name=COLLECTION,
             scroll_filter=Filter(
-                must=[FieldCondition(key="chunk_id", match=MatchValue(value=parent_id))]
+                must=[FieldCondition(key="chunk_id", match=MatchAny(any=parent_ids))]
             ),
-            limit=1,
+            limit=len(parent_ids),
             with_payload=True,
         )
-        if hits:
-            return hits[0].payload.get("text")
-        return None
+        return {
+            (h.payload or {}).get("chunk_id"): (h.payload or {}).get("text")
+            for h in hits
+        }
 
 
 @lru_cache

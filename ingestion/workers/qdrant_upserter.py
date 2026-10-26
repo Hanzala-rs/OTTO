@@ -9,6 +9,8 @@ from qdrant_client.models import (
     Filter,
     FieldCondition,
     MatchValue,
+    TextIndexParams,
+    TokenizerType,
 )
 from loguru import logger
 
@@ -17,7 +19,7 @@ from schemas.document_schema import ChunkPayload
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 COLLECTION = os.getenv("QDRANT_COLLECTION", "documents")
-VECTOR_DIM = int(os.getenv("VECTOR_DIM", "384"))
+VECTOR_DIM = int(os.getenv("VECTOR_DIM", "384"))  # paraphrase-multilingual-MiniLM-L12-v2 output dimension
 
 
 class QdrantUpserter:
@@ -33,6 +35,15 @@ class QdrantUpserter:
                 vectors_config=VectorParams(size=VECTOR_DIM, distance=Distance.COSINE),
             )
             logger.info(f"Created Qdrant collection '{COLLECTION}'")
+        try:
+            # Full-text index used by the backend keyword fallback (idempotent)
+            self.client.create_payload_index(
+                collection_name=COLLECTION,
+                field_name="text",
+                field_schema=TextIndexParams(type="text", tokenizer=TokenizerType.WORD, lowercase=True),
+            )
+        except Exception as exc:
+            logger.warning(f"Could not create text payload index: {exc}")
 
     def _hash_exists(self, doc_hash: str) -> bool:
         """Check if any point with this doc_hash already exists (deduplication)."""

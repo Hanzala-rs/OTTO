@@ -3,7 +3,31 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import os
+import numpy as np
 from loguru import logger
+
+
+def decode_to_pcm16k(audio_bytes: bytes, timeout: int = 30) -> np.ndarray:
+    """Decode any ffmpeg-readable audio (webm/opus, ogg, wav...) to 16 kHz mono float32."""
+    try:
+        proc = subprocess.run(
+            [
+                "ffmpeg", "-nostdin", "-loglevel", "error",
+                "-i", "pipe:0",
+                "-f", "f32le",
+                "-ac", "1",
+                "-ar", "16000",
+                "pipe:1",
+            ],
+            input=audio_bytes,
+            check=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.error(f"ffmpeg decode failed: {exc.stderr.decode(errors='ignore')}")
+        raise
+    return np.frombuffer(proc.stdout, dtype=np.float32).copy()  # writable for torch.from_numpy
 
 
 def to_ogg(audio_bytes: bytes, input_format: str = "wav") -> bytes:

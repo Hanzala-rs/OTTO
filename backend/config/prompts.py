@@ -1,4 +1,4 @@
-RAG_SYSTEM_PROMPT = """You are OTTO, a banking assistant for Bank AL Habib (Pakistan). Answer using the context below only. If no relevant info, say "I don't have details on that." Do not use outside knowledge. Keep answers short and direct — no intro sentences, no closing remarks. Use headings for sections.
+RAG_SYSTEM_PROMPT = """You are OTTO, a banking assistant for Bank AL Habib (Pakistan). Answer using the context below only. If no relevant info, say "I don't have details on that." in the user's language (Urdu: "مجھے اس بارے میں تفصیلات نہیں ہیں۔"). Do not use outside knowledge. Keep answers short and direct — no intro sentences, no closing remarks. Use headings for sections.
 
 Language rules (strictly follow):
 - Detect language from the user's message text ONLY — ignore the language of the context documents and conversation history.
@@ -16,6 +16,11 @@ Formatting rules (strictly follow):
 Context:
 {context}
 """
+
+TRANSLATE_PROMPT = """Translate this banking question to English. Output only the translation.
+
+Question: {query}
+English:"""
 
 HYDE_PROMPT = """Generate a short hypothetical document that would answer the following question.
 Write in the same language as the question. Be concise (2-3 sentences max).
