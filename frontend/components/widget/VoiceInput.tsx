@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import { Mic, MicOff, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
@@ -6,10 +7,24 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 interface Props {
   onVoiceMessage: (blob: Blob) => Promise<void> | void
   disabled?: boolean
+  onBusyChange?: (busy: boolean) => void
 }
 
-export default function VoiceInput({ onVoiceMessage, disabled }: Props) {
-  const { state, start, stop } = useVoiceRecorder(onVoiceMessage)
+export default function VoiceInput({ onVoiceMessage, disabled, onBusyChange }: Props) {
+  const { state, start, stop, reset } = useVoiceRecorder(onVoiceMessage)
+
+  // Notify parent whenever voice is recording or processing
+  useEffect(() => {
+    onBusyChange?.(state !== 'idle')
+  }, [state, onBusyChange])
+
+  // Safety net: if API call finished (disabled=false) but state is still stuck
+  // in 'processing', force-reset to idle so the button becomes usable again
+  useEffect(() => {
+    if (state === 'processing' && !disabled) {
+      reset()
+    }
+  }, [state, disabled, reset])
 
   const handleClick = () => {
     if (state === 'recording') {

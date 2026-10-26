@@ -8,8 +8,8 @@ from loguru import logger
 
 from config.settings import get_settings
 
-TOP_N = 3
-SCORE_THRESHOLD = -3.0  # cross-encoder raw logit; below this = not relevant
+TOP_N = 5
+SCORE_THRESHOLD = -5.0  # cross-encoder raw logit; below this = not relevant
 
 
 class Reranker:

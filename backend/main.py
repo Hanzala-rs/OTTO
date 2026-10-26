@@ -6,6 +6,8 @@ from loguru import logger
 
 from config.settings import get_settings
 from api.routes import chat, voice, health
+from api.middleware.guardrails import GuardrailsMiddleware
+from api.middleware.rate_limiter import RateLimitMiddleware
 
 settings = get_settings()
 
@@ -22,8 +24,12 @@ async def lifespan(app: FastAPI):
     # Warm up models on startup (avoids cold latency on first request)
     from rag.retriever import get_retriever
     from voice.stt import get_stt
+    from voice.vad import _load_vad_model
+    from rag.reranker import get_reranker
     get_retriever()
     get_stt()
+    _load_vad_model()
+    get_reranker()
     logger.info("Models loaded. Ready.")
     yield
     logger.info("Shutting down.")
@@ -35,12 +41,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Registered before CORSMiddleware so CORS ends up outermost (last-added wraps
+# outermost) and its headers still apply to 413/429 responses from these.
+app.add_middleware(GuardrailsMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Session-Id", "X-Transcript", "X-Language", "X-Response"],
 )
 
 app.include_router(health.router, tags=["health"])

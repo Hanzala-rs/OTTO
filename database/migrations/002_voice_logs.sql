@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS voice_logs (
     session_id      TEXT NOT NULL,
     transcript      TEXT,
     detected_lang   CHAR(2),
-    tts_engine      TEXT,   -- 'elevenlabs' | 'coqui'
+    tts_engine      TEXT,   -- 'edge-tts'
     stt_latency_ms  INT,
     tts_latency_ms  INT,
     rag_latency_ms  INT,

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://localhost:8333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "documents"
+    qdrant_timeout: int = 10
 
     # Redis
     redis_url: str = "redis://localhost:6379"
@@ -17,8 +18,13 @@ class Settings(BaseSettings):
 
     # LLM — Groq free tier
     groq_api_key: str = ""
-    llm_model: str = "gemma2-9b-it"
+    llm_model: str = "llama-3.3-70b-versatile"
     llm_temperature: float = 0.2
+    # LiteLLM proxy (OpenAI-compatible) — owns retries, rpm limits and fallbacks
+    llm_proxy_url: str = "http://litellm:4000"
+    llm_proxy_key: str = ""
+    llm_proxy_model: str = "otto-llm"
+    llm_voice_model: str = "otto-llm-fast"
 
     # Embeddings
     embedding_model: str = "BAAI/bge-m3"
@@ -26,10 +32,6 @@ class Settings(BaseSettings):
 
     # Whisper STT
     whisper_model: str = "small"
-
-    # ElevenLabs TTS (English)
-    elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
 
     # Monitoring
     langchain_tracing_v2: bool = False

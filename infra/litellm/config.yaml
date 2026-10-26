@@ -1,0 +1,22 @@
+# LiteLLM proxy — single gateway for all OTTO LLM calls (backend uses LLM_PROXY_MODEL).
+model_list:
+  - model_name: otto-llm
+    litellm_params:
+      # Must match LLM_MODEL in .env (LiteLLM can't compose os.environ/ into a string).
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+      rpm: 30
+  - model_name: otto-llm-fast
+    litellm_params:
+      model: groq/openai/gpt-oss-20b
+      api_key: os.environ/GROQ_API_KEY
+      reasoning_effort: low
+      rpm: 30
+
+router_settings:
+  num_retries: 2
+  timeout: 20
+  fallbacks: [{"otto-llm": ["otto-llm-fast"]}, {"otto-llm-fast": ["otto-llm"]}]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

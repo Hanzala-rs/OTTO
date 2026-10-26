@@ -7,7 +7,7 @@ python-multipart==0.0.9
 
 # LangChain ecosystem — let pip resolve compatible versions
 langchain>=0.2.14,<0.3
-langchain-groq>=0.1.9,<0.2
+langchain-openai>=0.1.20,<0.2
 langchain-community>=0.2.14,<0.3
 langchain-core>=0.2.43,<0.3
 langgraph>=0.1.19,<0.2
@@ -26,7 +26,6 @@ torchaudio==2.6.0+cpu
 faster-whisper==1.0.3
 
 # Voice — TTS
-elevenlabs==1.1.2
 edge-tts>=6.1.9
 
 # Audio processing
@@ -46,7 +45,10 @@ sqlalchemy==2.0.29
 prometheus-client==0.20.0
 
 # Evaluation
-ragas>=0.1.21
+# Pinned exact: ragas>=0.4 pulls in `instructor`, which unconditionally imports
+# `anthropic` (not installed here) and breaks at import time. 0.1.21 keeps the
+# classic evaluate()/metrics API this codebase is written against.
+ragas==0.1.21
 datasets>=2.19.0
 
 # Config
