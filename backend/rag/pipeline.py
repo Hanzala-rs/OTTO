@@ -17,7 +17,7 @@ from loguru import logger
 from config.prompts import RAG_SYSTEM_PROMPT
 from config.settings import get_settings
 from rag.llm_client import get_llm
-from rag.query_engine import build_hyde_query
+from rag.query_engine import build_hyde_query, to_search_query
 from rag.retriever import get_retriever
 from rag.reranker import get_reranker
 from memory.message_history import get_history
@@ -33,6 +33,7 @@ class RAGState(TypedDict):
     audio_bytes: Optional[bytes]
     transcript: Optional[str]
     hyde_query: Optional[str]
+    search_query: Optional[str]   # English form of query used for retrieval/rerank
     retrieved_chunks: Optional[List[dict]]
     reranked_chunks: Optional[List[dict]]
     context: Optional[str]
@@ -66,11 +67,19 @@ def hyde_node(state: RAGState) -> RAGState:
     if state.get("error"):
         return state
     try:
-        hyde_query = build_hyde_query(state["query"])
+        search_query = to_search_query(state["query"])
+    except Exception as exc:
+        logger.warning(f"Query translation failed, using raw query: {exc}")
+        search_query = state["query"]
+    # Voice skips HyDE to save one LLM round-trip
+    if state.get("is_voice"):
+        return {**state, "search_query": search_query, "hyde_query": None}
+    try:
+        hyde_query = build_hyde_query(search_query)
     except Exception as exc:
         logger.warning(f"HyDE failed, falling back to raw query: {exc}")
-        hyde_query = state["query"]
-    return {**state, "hyde_query": hyde_query}
+        hyde_query = search_query
+    return {**state, "search_query": search_query, "hyde_query": hyde_query}
 
 
 def retriever_node(state: RAGState) -> RAGState:
@@ -78,7 +87,7 @@ def retriever_node(state: RAGState) -> RAGState:
         return state
     retriever = get_retriever()
     chunks = retriever.retrieve(
-        query=state["hyde_query"] or state["query"],
+        query=state["hyde_query"] or state.get("search_query") or state["query"],
         lang=state["language"],
     )
     return {**state, "retrieved_chunks": chunks}
@@ -91,13 +100,16 @@ def reranker_node(state: RAGState) -> RAGState:
     retriever = get_retriever()
     chunks = state["retrieved_chunks"] or []
 
-    reranked = reranker.rerank(state["query"], chunks)
+    reranked = reranker.rerank(state.get("search_query") or state["query"], chunks)
 
     # Promote child chunks → fetch their parent for richer LLM context
+    parents = retriever.fetch_parents(
+        list({c["parent_id"] for c in reranked if c.get("parent_id")})
+    )
     enriched = []
     for chunk in reranked:
         if chunk.get("parent_id"):
-            parent_text = retriever.fetch_parent(chunk["parent_id"])
+            parent_text = parents.get(chunk["parent_id"])
             if parent_text:
                 chunk = {**chunk, "text": parent_text}
         enriched.append(chunk)
@@ -112,7 +124,7 @@ def llm_node(state: RAGState) -> RAGState:
         return state
 
     try:
-        llm = get_llm()
+        llm = get_llm(get_settings().llm_voice_model if state.get("is_voice") else None)
         history = get_history(state["session_id"])
         messages = history.get_messages()
 

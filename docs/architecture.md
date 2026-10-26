@@ -61,7 +61,7 @@ Data Pipeline:
 4. Ingestion worker (workers/consumer.py) consumes messages
       - Detects language (langdetect)
       - Chunks text (ParentChildChunker)
-      - Embeds chunks (paraphrase-multilingual-MiniLM-L12-v2, 384 dim)
+      - Embeds chunks (BAAI/bge-m3, 1024 dim)
       - Upserts to Qdrant collection: documents
 ```
 
@@ -128,14 +128,26 @@ Frontend sends audio blob to POST /voice
 MP3 audio returned to frontend
 ```
 
+Each request also logs STT/TTS/RAG/total latency and detected language to the
+`voice_logs` Postgres table (fire-and-forget background task, non-blocking).
+
+---
+
+## API Middleware
+
+Applied in `backend/main.py`, outermost to innermost: CORS → rate limiter → guardrails → router.
+
+- **RateLimitMiddleware** — 60 requests/minute per IP, Redis-backed (`backend/api/middleware/rate_limiter.py`)
+- **GuardrailsMiddleware** — rejects request bodies over 10MB (`backend/api/middleware/guardrails.py`)
+
 ---
 
 ## Models
 
 | Model | Used For | Size | Provider |
 |---|---|---|---|
-| paraphrase-multilingual-MiniLM-L12-v2 | Embeddings (ingestion + retrieval) | ~118 MB | HuggingFace |
-| cross-encoder/ms-marco-MiniLM-L-6-v2 | Reranking | ~22 MB | HuggingFace |
+| BAAI/bge-m3 | Embeddings (ingestion + retrieval), 1024 dim | ~2.2 GB | HuggingFace |
+| BAAI/bge-reranker-v2-m3 | Reranking | ~2.2 GB | HuggingFace |
 | faster-whisper small | Speech-to-text | ~242 MB | HuggingFace |
 | llama-3.3-70b-versatile | LLM responses | API | Groq |
 | edge-tts | Text-to-speech | API | Microsoft |

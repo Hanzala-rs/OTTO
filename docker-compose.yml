@@ -17,6 +17,14 @@ services:
       timeout: 5s
       retries: 5
 
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
   redpanda:
     image: redpandadata/redpanda:latest
     command:
@@ -74,6 +82,22 @@ services:
       timeout: 5s
       retries: 5
 
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.105.1
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    env_file: .env
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./infra/litellm/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   ingestion:
     build:
       context: ./ingestion
@@ -100,9 +124,14 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - qdrant
-      - redis
-      - postgres
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
+      litellm:
+        condition: service_healthy
     env_file: .env
     environment:
       WATCHFILES_FORCE_POLLING: "true"
