@@ -17,8 +17,15 @@ from loguru import logger
 
 from config.settings import get_settings
 
-DENSE_TOP_K = 20   # retrieve 20 before reranking
+DENSE_TOP_K = 40   # wide candidate pool; reranker narrows it down
 COLLECTION = get_settings().qdrant_collection
+PASSAGE_CHARS = 800   # reranker passage size for long keyword hits (~max_length tokens)
+PASSAGE_STEP = 600    # overlap so an answer isn't split across two passages
+
+
+def _passages(text: str) -> List[str]:
+    """Overlapping passages of a long chunk, for the reranker to pick the relevant one."""
+    return [text[i: i + PASSAGE_CHARS] for i in range(0, max(1, len(text) - PASSAGE_CHARS + PASSAGE_STEP), PASSAGE_STEP)]
 
 
 class HybridRetriever:
@@ -83,51 +90,59 @@ class HybridRetriever:
                 "text": payload.get("text", ""),
             })
 
-        # Keyword fallback: supplement dense hits when top score is weak
-        top_score = dense_hits[0].score if dense_hits else 0.0
-        if top_score < 0.75:
-            _STOPWORDS = {"what", "were", "with", "that", "this", "from", "have",
-                          "does", "tell", "about", "bank", "habib", "bahl"}
-            # Use only first line — HyDE queries are multi-line
-            first_line = query.split('\n')[0]
-            keywords = [
-                w.lower().strip('.,?!') for w in first_line.split()
-                if len(w) > 3 and w.lower() not in _STOPWORDS
-            ]
-            if keywords:
-                candidates = []
+        # Keyword search: always supplement dense hits — a high dense score can still
+        # miss exact terms buried in long tables; the reranker chooses among both
+        _STOPWORDS = {"what", "were", "with", "that", "this", "from", "have",
+                      "does", "tell", "about", "bank", "habib", "bahl"}
+        # Use only first line — HyDE queries are multi-line
+        first_line = query.split('\n')[0]
+        keywords = [
+            w.lower().strip('.,?!') for w in first_line.split()
+            if len(w) > 3 and w.lower() not in _STOPWORDS
+        ]
+        if keywords:
+            candidates = []
+            conditions = [FieldCondition(key="text", match=MatchText(text=kw)) for kw in keywords]
+            # Chunks containing every keyword first; a "should" scroll returns an
+            # arbitrary 50 that often only match the most common keyword
+            points, _ = self.client.scroll(
+                collection_name=COLLECTION,
+                scroll_filter=Filter(must=conditions),
+                limit=50,
+                with_payload=True,
+            )
+            if not points:
                 points, _ = self.client.scroll(
                     collection_name=COLLECTION,
-                    scroll_filter=Filter(should=[
-                        FieldCondition(key="text", match=MatchText(text=kw))
-                        for kw in keywords
-                    ]),
+                    scroll_filter=Filter(should=conditions),
                     limit=50,
                     with_payload=True,
                 )
-                for p in points:
-                    cid = (p.payload or {}).get("chunk_id")
-                    if cid in seen_ids:
-                        continue
-                    text_lower = (p.payload or {}).get("text", "").lower()
-                    match_count = sum(1 for kw in keywords if kw in text_lower)
-                    if match_count >= max(2, len(keywords) // 2):
-                        candidates.append((match_count, p))
-                # Take top-5 by keyword overlap
-                candidates.sort(key=lambda x: x[0], reverse=True)
-                for _, p in candidates[:5]:
-                    payload = p.payload or {}
-                    cid = payload.get("chunk_id")
-                    results.append({
-                        "chunk_id": cid,
-                        "parent_id": payload.get("parent_id"),
-                        "chunk_type": payload.get("chunk_type"),
-                        "lang": payload.get("lang"),
-                        "source": payload.get("source"),
-                        "score": 0.6,
-                        "text": payload.get("text", ""),
-                    })
-                    seen_ids.add(cid)
+            for p in points:
+                cid = (p.payload or {}).get("chunk_id")
+                if cid in seen_ids:
+                    continue
+                text_lower = (p.payload or {}).get("text", "").lower()
+                matched = [kw for kw in keywords if kw in text_lower]
+                if len(matched) >= max(2, len(keywords) // 2):
+                    candidates.append((len(matched), sum(text_lower.count(k) for k in matched), p))
+            # Take top-5 by keyword overlap, then by keyword occurrences
+            candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+            for _, _, p in candidates[:5]:
+                payload = p.payload or {}
+                cid = payload.get("chunk_id")
+                text = payload.get("text", "")
+                results.append({
+                    "passages": _passages(text),
+                    "chunk_id": cid,
+                    "parent_id": payload.get("parent_id"),
+                    "chunk_type": payload.get("chunk_type"),
+                    "lang": payload.get("lang"),
+                    "source": payload.get("source"),
+                    "score": 0.6,
+                    "text": payload.get("text", ""),
+                })
+                seen_ids.add(cid)
 
         return results
 

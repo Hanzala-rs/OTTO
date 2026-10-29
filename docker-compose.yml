@@ -95,7 +95,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 180s   # cold start takes ~3 min when the whole stack boots together
     restart: unless-stopped
 
   ingestion:
@@ -139,6 +139,7 @@ services:
     volumes:
       - ./backend:/app
       - hf_cache:/root/.cache/huggingface
+      - torch_cache:/root/.cache/torch   # silero-vad (torch.hub): avoids re-downloading from GitHub on every recreate
     restart: unless-stopped
 
   frontend:
@@ -156,3 +157,4 @@ volumes:
   postgres_data:
   qdrant_data:
   hf_cache:
+  torch_cache:

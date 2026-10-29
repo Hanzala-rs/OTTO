@@ -6,6 +6,7 @@ State machine nodes:
 Voice path inserts stt before guardrails and tts after output_guard.
 """
 from __future__ import annotations
+import re
 from typing import TypedDict, Optional, List, Any
 
 from langgraph.graph import StateGraph, END
@@ -17,10 +18,11 @@ from loguru import logger
 from config.prompts import RAG_SYSTEM_PROMPT
 from config.settings import get_settings
 from rag.llm_client import get_llm
-from rag.query_engine import build_hyde_query, to_search_query
+from rag.query_engine import build_hyde_query, rewrite_query
 from rag.retriever import get_retriever
 from rag.reranker import get_reranker
 from memory.message_history import get_history
+from voice.language_router import reply_language
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
@@ -34,6 +36,7 @@ class RAGState(TypedDict):
     transcript: Optional[str]
     hyde_query: Optional[str]
     search_query: Optional[str]   # English form of query used for retrieval/rerank
+    query_language: Optional[str]  # language the user wrote in, detected by the rewrite LLM
     retrieved_chunks: Optional[List[dict]]
     reranked_chunks: Optional[List[dict]]
     context: Optional[str]
@@ -67,30 +70,80 @@ def hyde_node(state: RAGState) -> RAGState:
     if state.get("error"):
         return state
     try:
-        search_query = to_search_query(state["query"])
+        search_query, query_language = rewrite_query(state["query"], fast=bool(state.get("is_voice")))
     except Exception as exc:
-        logger.warning(f"Query translation failed, using raw query: {exc}")
-        search_query = state["query"]
+        # Usually the main model's Groq quota; a fast-model rewrite beats searching
+        # with the raw (often non-English) query
+        logger.warning(f"Query rewrite failed, retrying on fast model: {exc}")
+        try:
+            search_query, query_language = rewrite_query(state["query"], fast=True)
+        except Exception as exc2:
+            logger.warning(f"Query rewrite failed, using raw query: {exc2}")
+            search_query, query_language = state["query"], None
+    state = {**state, "search_query": search_query, "query_language": query_language}
     # Voice skips HyDE to save one LLM round-trip
     if state.get("is_voice"):
-        return {**state, "search_query": search_query, "hyde_query": None}
+        return {**state, "hyde_query": None}
     try:
         hyde_query = build_hyde_query(search_query)
     except Exception as exc:
         logger.warning(f"HyDE failed, falling back to raw query: {exc}")
         hyde_query = search_query
-    return {**state, "search_query": search_query, "hyde_query": hyde_query}
+    return {**state, "hyde_query": hyde_query}
 
 
 def retriever_node(state: RAGState) -> RAGState:
     if state.get("error"):
         return state
     retriever = get_retriever()
-    chunks = retriever.retrieve(
-        query=state["hyde_query"] or state.get("search_query") or state["query"],
-        lang=state["language"],
-    )
+    query = state["hyde_query"] or state.get("search_query") or state["query"]
+    if state["query"] not in query:
+        # Original wording too: the rewrite can translate a product name away.
+        # Appended, since the keyword search reads only the first line.
+        query = f"{query}\n{state['query']}"
+    chunks = retriever.retrieve(query=query, lang=state["language"])
     return {**state, "retrieved_chunks": chunks}
+
+
+PARENT_WINDOW_CHARS = 600   # parent text kept on each side of the matched child
+MAX_CHUNK_CHARS = 1500      # cap for chunks without a locatable child
+# Markdown table separator row (| :--- | --- |); stored chunk text has newlines flattened
+_TABLE_SEPARATOR = re.compile(r"(?:\|\s*:?-{3,}:?\s*)+\|")
+_NON_TABLE_TEXT = re.compile(r"[^|]{300,}")
+
+
+def _table_header(text: str, start: int) -> str | None:
+    """Header row of the table that `start` falls inside, or None."""
+    sep = None
+    for sep in _TABLE_SEPARATOR.finditer(text, 0, start):
+        pass
+    if not sep or _NON_TABLE_TEXT.search(text, sep.end(), start):
+        return None   # no table before start, or it ended before start
+    ncols = sep.group(0).count("|") - 1
+    cells = text[:sep.start()].rstrip().split("|")[-(ncols + 1):-1]
+    if len(cells) != ncols:
+        return None
+    return "| " + " | ".join(c.strip() for c in cells) + " |"
+
+
+def _parent_window(chunk: dict, parent: str | None) -> str:
+    """Matched child plus surrounding parent text: keeps the answer, limits tokens
+    (Groq free tier allows 8k tokens/minute; full parents cost ~4.5k per answer)."""
+    # Keyword hits carry the passage that matched; centre the window on it
+    matched = chunk.get("rerank_text") or chunk["text"]
+    if not parent:
+        if not chunk.get("rerank_text"):
+            return chunk["text"][:MAX_CHUNK_CHARS]
+        parent = chunk["text"]
+    pos = parent.find(matched[:200])
+    if pos < 0:
+        return parent[:MAX_CHUNK_CHARS]
+    start = max(0, pos - PARENT_WINDOW_CHARS)
+    window = parent[start: pos + len(matched) + PARENT_WINDOW_CHARS]
+    # Keep the header of a table the window starts inside, so column meaning
+    # (e.g. previous vs revised charges) isn't lost
+    header = _table_header(parent, start)
+    return f"{header}\n{window}" if header else window
 
 
 def reranker_node(state: RAGState) -> RAGState:
@@ -106,16 +159,8 @@ def reranker_node(state: RAGState) -> RAGState:
     parents = retriever.fetch_parents(
         list({c["parent_id"] for c in reranked if c.get("parent_id")})
     )
-    enriched = []
-    for chunk in reranked:
-        if chunk.get("parent_id"):
-            parent_text = parents.get(chunk["parent_id"])
-            if parent_text:
-                chunk = {**chunk, "text": parent_text}
-        enriched.append(chunk)
-
-    MAX_CHUNK_CHARS = 1200
-    context = "\n\n---\n\n".join(c["text"][:MAX_CHUNK_CHARS] for c in enriched)
+    enriched = [{**c, "text": _parent_window(c, parents.get(c.get("parent_id")))} for c in reranked]
+    context = "\n\n---\n\n".join(f"[Source: {c.get('source') or 'unknown'}]\n{c['text']}" for c in enriched)
     return {**state, "reranked_chunks": enriched, "context": context}
 
 
@@ -124,7 +169,6 @@ def llm_node(state: RAGState) -> RAGState:
         return state
 
     try:
-        llm = get_llm(get_settings().llm_voice_model if state.get("is_voice") else None)
         history = get_history(state["session_id"])
         messages = history.get_messages()
 
@@ -133,12 +177,22 @@ def llm_node(state: RAGState) -> RAGState:
             *[(m.type, m.content) for m in messages],
             ("human", "{query}"),
         ])
-
-        chain = prompt | llm | StrOutputParser()
-        response = chain.invoke({
+        inputs = {
             "context": state.get("context", "No relevant context found."),
             "query": state["query"],
-        })
+            "reply_language": reply_language(state.get("query_language"), state["query"]),
+        }
+
+        fast_model = get_settings().llm_voice_model
+        try:
+            llm = get_llm(fast_model if state.get("is_voice") else None)
+            response = (prompt | llm | StrOutputParser()).invoke(inputs)
+        except Exception as exc:
+            if state.get("is_voice"):
+                raise
+            # Main model rate-limited/timed out: answer with the fast model instead of failing
+            logger.warning(f"Main LLM failed, retrying on fast model: {exc}")
+            response = (prompt | get_llm(fast_model) | StrOutputParser()).invoke(inputs)
 
         history.add_message(HumanMessage(content=state["query"]))
         history.add_message(AIMessage(content=response))
